@@ -33,7 +33,7 @@ def affine_to_field(matrix, grid, displacement=True):
     return result
 
 
-def local_affines_to_displacement(
+def local_affines_to_field(
     shape, spacing, affines,
     blocksize, overlap,
     displacement=True,
