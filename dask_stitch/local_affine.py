@@ -1,6 +1,6 @@
 import numpy as np
 import dask.array as da
-from dask_stitch.stitch import stitch_blocks
+from dask_stitch.stitch import weight_block, merge_overlaps
 
 
 def position_grid(shape, blocksize):
@@ -15,10 +15,6 @@ def position_grid(shape, blocksize):
 def affine_to_field(matrix, grid, displacement=True):
     """
     """
-
-    # ensure 32 bit data type for fields
-    matrix = matrix.astype(np.float32)
-    grid = grid.astype(np.float32)
 
     # apply affine to coordinates
     mm = matrix[:3, :3]
@@ -43,7 +39,7 @@ def local_affines_to_field(
 
     # get a coordinate grid
     grid = position_grid(
-        np.array(blocksize) * affine.shape[:3], blocksize,
+        np.array(blocksize) * affines.shape[:3], blocksize,
     )
     grid = grid * spacing.astype(np.float32)
     grid = grid[..., None]  # needed for map_overlap
@@ -53,17 +49,21 @@ def local_affines_to_field(
         affines, chunks=(1, 1, 1, 4, 4),
     )
 
-    # strip dummy axes and get field
-    def wrapped_affine_to_field(x, y):
-        return affine_to_field(
+    # convert to weighted fields
+    def affine_to_weighted_field(x, y, block_info=None):
+        field = affine_to_field(
             x.squeeze(), y.squeeze(),
             displacement=displacement,
+        )
+        return weight_block(
+            field, blocksize, overlap, block_info,
         )
 
     # compute affine transforms as displacement fields, lazy dask arrays
     blocksize_with_overlaps = tuple(x+2*y for x, y in zip(blocksize, overlap))
     fields = da.map_overlap(
-        wrapped_affine_to_field, affines_da, grid,
+        affine_to_weighted_field,
+        affines_da, grid,
         depth=[0, tuple(overlap)+(0, 0)],
         boundary=0,
         trim=False,
@@ -74,12 +74,20 @@ def local_affines_to_field(
     )
 
     # stitch affine position fields
-    coords = stitch_blocks(fields, blocksize, overlap)
+    coords = da.map_overlap(
+        merge_overlaps,
+        fields,
+        overlap=overlap,
+        depth=tuple(overlap) + (0,),
+        boundary=0.,
+        trim=False,
+        dtype=np.float32,
+        chunks=list(blocksize) + [3,],
+    )
 
     # crop to original shape
     coords = coords[:shape[0], :shape[1], :shape[2]]
 
     # return result
     return coords
-
 

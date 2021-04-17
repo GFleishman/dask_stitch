@@ -15,18 +15,19 @@ def weight_block(block, blocksize, overlap, block_info=None):
     for i in range(3):
 
         # get core shape and pad sizes
-        c = blocksize[i] - 2*overlap[i] + 2
-        p_ones, p_linear = [0, 0], [2*p-1, 2*p-1]
+        o = overlap[i]  # shorthand
+        c = blocksize[i] - 2*o + 2
+        p_ones, p_linear = [0, 0], [2*o-1, 2*o-1]
         if block_index[i] == 0:
-            p_ones[0], p_linear[0] = 2*p-1, 0
+            p_ones[0], p_linear[0] = 2*o-1, 0
         if block_index[i] == block_grid[i] - 1:
-            p_ones[1], p_linear[1] = 2*p-1, 0
+            p_ones[1], p_linear[1] = 2*o-1, 0
         core.append(c)
         pad_ones.append(tuple(p_ones))
         pad_linear.append(tuple(p_linear))
 
     # create weights core
-    weights = np.ones(core, dtype=np.float32)
+    weights = da.ones(core, dtype=np.float32)
 
     # extend weights
     weights = da.pad(
@@ -94,25 +95,28 @@ def stitch_blocks(blocks, blocksize, overlap):
     """
     """
 
+    # blocks may be a vector fields
+    # conditional is too general, but works for now
+    if blocks.ndim != len(blocksize):
+        blocksize = list(blocksize) + [3,]
+        overlap = tuple(overlap) + (0,)
+
     # weight block edges
     weighted_blocks = da.map_blocks(
         weight_block, blocks,
-        blocksize=blocksize,
-        overlap=overlap,
+        blocksize=blocksize[:3],
+        overlap=overlap[:3],
         dtype=np.float32,
     )
-
-    # set chunksize for scalar or vector fields
-    chunks = blocksize if blocks.ndim == 3 else list(blocksize)+[3,]
 
     # stitch overlap regions, return
     return da.map_overlap(
         merge_overlaps, weighted_blocks,
-        overlap=overlap,
+        overlap=overlap[:3],
         depth=overlap,
         boundary=0.,
         trim=False,
         dtype=np.float32,
-        chunks=chunks,
+        chunks=blocksize,
     )
 

@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="dask_stitch",
-    version="0.0.1",
+    version="0.0.2",
     author="Greg M. Fleishman",
     author_email="greg.nli10me@gmail.com",
     description="Linear blend stitching for map_overlap calls in dask",
