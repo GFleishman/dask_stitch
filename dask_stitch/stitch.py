@@ -27,13 +27,13 @@ def weight_block(block, blocksize, overlap, block_info=None):
         pad_linear.append(tuple(p_linear))
 
     # create weights core
-    weights = da.ones(core, dtype=np.float32)
+    weights = np.ones(core, dtype=np.float32)
 
     # extend weights
-    weights = da.pad(
+    weights = np.pad(
         weights, pad_ones, mode='constant', constant_values=1,
     )
-    weights = da.pad(
+    weights = np.pad(
         weights, pad_linear, mode='linear_ramp', end_values=0,
     )
 
@@ -43,7 +43,7 @@ def weight_block(block, blocksize, overlap, block_info=None):
         weights = weights[..., None]
 
     # multiply data by weights and return
-    return da.multiply(block, weights)
+    return np.multiply(block, weights)
 
 
 def merge_overlaps(block, overlap):

@@ -19,7 +19,7 @@ def affine_to_field(matrix, grid, displacement=True):
     # apply affine to coordinates
     mm = matrix[:3, :3]
     tt = matrix[:3, -1]
-    result = da.einsum('...ij,...j->...i', mm, grid) + tt
+    result = np.einsum('...ij,...j->...i', mm, grid) + tt
 
     # convert positions to displacements
     if displacement:
