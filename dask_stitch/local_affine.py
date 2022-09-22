@@ -85,7 +85,7 @@ def merge_neighbors(
             for no, o in zip(neighbor_offset, overlap):
                 bs, ws = slice(None, None), slice(o, -o)
                 if no == -1:
-                    bs, ws = slice(0, o), slice(o, 0, -1)
+                    bs, ws = slice(0, o), slice(o-1, None, -1)
                 elif no == 1:
                     bs, ws = slice(-o, None), slice(-1, -o-1, -1) 
                 block_slc.append(bs)
